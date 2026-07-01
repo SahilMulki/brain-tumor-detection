@@ -7,7 +7,7 @@ This project focuses on automatically identifying and classifying brain tumors f
 * [Sahil Mulki](https://github.com/SahilMulki)
 * [Yi Zou](https://github.com/yizou275)
 * [Hamet Coulibaly](https://github.com/hamet-c)
-* Michael Abraham
+* [Michael Abraham](https://github.com/mikeiioo)
 * [Izzie Lee](https://github.com/jiwonizzielee)
 * Oyinkansola Oyedare
 * [Ying Lin Zhao](https://github.com/Yzhao2433)
