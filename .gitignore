@@ -1,4 +1,9 @@
 brain_mri_dataset/
 venv/
+.venv/
+.venv-1/
 .ipynb_checkpoints
 log/
+.env
+*.pt
+*.pth
