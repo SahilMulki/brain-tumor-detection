@@ -48,7 +48,7 @@ def load_model():
     device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
     model = SimpleCNN()
     # load saved weights from brain_mri_cnn_v5.pth file
-    model.load_state_dict(torch.load('brain_mri_cnn_v5.pth', map_location=device))
+    model.load_state_dict(torch.load('brain_mri_cnn.pth', map_location=device))
     model = model.to(device)
     model.eval() # puts model in evaluation mode (deactivates training behavior)
     return model, device
