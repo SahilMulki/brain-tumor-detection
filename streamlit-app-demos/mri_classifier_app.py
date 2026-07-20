@@ -13,7 +13,7 @@ class SimpleCNN(nn.Module):
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)  # cut image size by half
 
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=16, kernel_size=3, padding=1)  # input size: 256x256
-        self.bn1 = nn.BatchNorm2d(num_features=16)
+        self.bn1 = nn.BatchNorm2d(num_features=16) # Match out_channels
 
         self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1) # input size: 128x128
         self.bn2 = nn.BatchNorm2d(num_features=32)
@@ -24,8 +24,11 @@ class SimpleCNN(nn.Module):
         self.conv4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1) # input size: 32x32
         self.bn4 = nn.BatchNorm2d(num_features=128)
 
+        self.conv5 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1) # input size: 16x16
+        self.bn5 = nn.BatchNorm2d(num_features=256)
+
         self.dropout = nn.Dropout()
-        self.full_conn1 = nn.Linear(in_features=128 * 16 * 16, out_features=512)  # input size: 16x16
+        self.full_conn1 = nn.Linear(in_features=256 * 8 * 8, out_features=512)  # input size: 16x16
         self.full_conn2 = nn.Linear(in_features=512, out_features=4)  # output size: 4 classes
 
     def forward(self, x):
@@ -33,6 +36,7 @@ class SimpleCNN(nn.Module):
         x = self.pool(F.relu(self.bn2(self.conv2(x))))  # output size: 64x64
         x = self.pool(F.relu(self.bn3(self.conv3(x))))  # output size: 32x32
         x = self.pool(F.relu(self.bn4(self.conv4(x))))  # output size: 16x16
+        x = self.pool(F.relu(self.bn5(self.conv5(x))))  # output size: 8x8
 
         x = torch.flatten(x, start_dim=1)  # flatten the tensor for fully connected layer
         x = F.relu(self.full_conn1(x))
@@ -47,7 +51,7 @@ def load_model():
     # device allocation: CUDA -> MPS -> CPU
     device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
     model = SimpleCNN()
-    # load saved weights from brain_mri_cnn_v5.pth file
+    # load saved weights 
     model.load_state_dict(torch.load('brain_mri_cnn.pth', map_location=device))
     model = model.to(device)
     model.eval() # puts model in evaluation mode (deactivates training behavior)
