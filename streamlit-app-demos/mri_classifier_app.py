@@ -1,10 +1,11 @@
+import os
+import gdown
 import streamlit as st
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import transforms
 from PIL import Image
-
 
 # copy same cnn model
 class SimpleCNN(nn.Module):
@@ -44,34 +45,38 @@ class SimpleCNN(nn.Module):
         x = self.full_conn2(x)
         return x
 
-
-# load model weights with caching for optimization
+# downloads a .pth file from Google Drive if not in directory; loads and returns trained model
 @st.cache_resource
-def load_model():
+def load_model(file_id: str, file_name: str, model_name: nn.Module):
     # device allocation: CUDA -> MPS -> CPU
     device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
-    model = SimpleCNN()
+
+    # check if file in the current working directory
+    if not os.path.exists(file_name):
+        st.toast(f"Downloading {file_name} from Google Drive...")
+        url = f"https://drive.google.com/uc?id={file_id}"
+        gdown.download(url, file_name, quiet=False)
+    
+    model = model_name()
     # load saved weights 
-    model.load_state_dict(torch.load('brain_mri_cnn.pth', map_location=device))
+    model.load_state_dict(torch.load(file_name, map_location=device))
     model = model.to(device)
     model.eval() # puts model in evaluation mode (deactivates training behavior)
     return model, device
 
-# initialize model
-try:
-    model, device = load_model()
-    model_loaded = True
-except Exception as e:
-    model_loaded = False
-    st.error(f"Error loading model weights: {e}. Please ensure correct file is in this folder.")
-
+# # initialize model
+# try:
+#     model, device = load_model()
+#     model_loaded = True
+# except Exception as e:
+#     model_loaded = False
+#     st.error(f"Error loading model weights: {e}. Please ensure correct file is in this folder.")
 
 # transform for visual preprocessing 
 visual_transform = transforms.Compose([
         transforms.Resize((256, 256)),
         transforms.Grayscale(num_output_channels=1)
     ])
-
 
 # transform pipeline for normalized tensor
 def to_normalized_tensor(image):
@@ -86,14 +91,28 @@ def to_normalized_tensor(image):
     tensor = tensor.unsqueeze(0) 
     return tensor
 
+# runs model inference; returns predictions
+def run_inference(model, device, processed_image, classes):
+    # turn image into normalized tensor
+    input_tensor = to_normalized_tensor(processed_image).to(device)
 
-# set page config for web app interface
+    # forward pass
+    with torch.no_grad():
+        outputs = model(input_tensor)
+        probabilities = F.softmax(outputs, dim=1)[0]
+        confidence, predicted_idx = torch.max(probabilities, 0)
+        
+        predicted_class = classes[predicted_idx.item()]
+        confidence_pct = confidence.item() * 100
+        
+    return predicted_class, confidence_pct, probabilities
+
+
+# setup page UI
 st.set_page_config(
     page_title="Brain MRI Tumor Classifier",
     layout="centered"
     )
-
-# setup user interface
 st.title("Brain MRI Tumor Classifier")
 st.write("Upload a brain MRI scan (JPG, JPEG, or PNG) below. The model will preprocess it to grayscale, run inference, and predict the clinical diagnosis.")
 
@@ -103,38 +122,190 @@ uploaded_file = st.file_uploader("Upload an MRI Scan...", type=["jpg", "jpeg", "
 # Classes matching your directory/labels map
 classes = ['Glioma', 'Meningioma', 'No Tumor', 'Pituitary']
 
-if uploaded_file is not None and model_loaded:
+if uploaded_file is not None:
     # open and render image
     original_image = Image.open(uploaded_file)
 
-    processed_image = visual_transform(original_image)
+    # visualize image transform
+    processed_image = visual_transform(original_image)  
     st.write("##### Uploaded Scan (Preprocessed)")
     st.image(processed_image, width=300)
-    
-    st.write("*Running image inference...*")
-    
-    # turn image into normalized tensor
-    input_tensor = to_normalized_tensor(processed_image).to(device)
-    
-    # model predictions
-    with torch.no_grad():
-        outputs = model(input_tensor)
-        probabilities = F.softmax(outputs, dim=1)[0]
-        confidence, predicted_idx = torch.max(probabilities, 0)
-        
-        predicted_class = classes[predicted_idx.item()]
-        confidence_pct = confidence.item() * 100
 
-    # present diagnostic results
-    st.markdown("---")
-    st.subheader("Diagnostic Results")
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["Angel Model", "Sahil Model", "Yi Model", "Hamet Model", "Izzie Model", "Mike Model"])
     
-    if predicted_class == "No Tumor":
-        st.success(f"**Prediction: {predicted_class}** (Confidence: {confidence_pct:.2f}%)")
-    else:
-        st.warning(f"**Tumor Detected: {predicted_class}** (Confidence: {confidence_pct:.2f}%)")
-        
-    st.write("##### Classification Confidence Breakdown:")
-    for idx, name in enumerate(classes):
-        prob = probabilities[idx].item() * 100
-        st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+    # st.write("*Running image inference...*")
+
+    with tab1:
+        st.subheader("Angel Model")
+        try:
+            # pass Google Drive File ID and filename
+            model, device = load_model(
+                file_id="17ajFrT4D4p--d4DVeFDK2pZXqCeeFUIm", 
+                file_name="brain_mri_cnn.pth",
+                model_name=SimpleCNN
+            )
+
+            st.toast("*Running image inference...*")
+            pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+            if pred == "No Tumor":
+                st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+            else:
+                st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+            # present diagnostic results
+            st.markdown("---")
+            st.subheader("Diagnostic Results")
+                
+            st.write("##### Classification Confidence Breakdown:")
+            for idx, name in enumerate(classes):
+                prob = probs[idx].item() * 100
+                st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+        except Exception as e:
+            st.error(f"Could not load selected model: {e}")
+
+    # with tab2:
+    #     st.subheader("Sahil Model")
+    #     try:
+    #         # pass Google Drive File ID and filename
+    #         model, device = load_model(
+    #             file_id="", 
+    #             file_name="",
+    #             model_name=""
+    #         )
+            
+    #         pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+    #         if pred == "No Tumor":
+    #             st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+    #         else:
+    #             st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+    #         # present diagnostic results
+    #         st.markdown("---")
+    #         st.subheader("Diagnostic Results")
+                
+    #         st.write("##### Classification Confidence Breakdown:")
+    #         for idx, name in enumerate(classes):
+    #             prob = probs[idx].item() * 100
+    #             st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+    #     except Exception as e:
+    #         st.error(f"Could not load selected model: {e}")
+
+    # with tab3:
+    #     st.subheader("Yi Model")
+    #     try:
+    #         # pass Google Drive File ID and filename
+    #         model, device = load_model(
+    #             file_id="", 
+    #             file_name="",
+    #             model_name=""
+    #         )
+            
+    #         pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+    #         if pred == "No Tumor":
+    #             st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+    #         else:
+    #             st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+    #         # present diagnostic results
+    #         st.markdown("---")
+    #         st.subheader("Diagnostic Results")
+                
+    #         st.write("##### Classification Confidence Breakdown:")
+    #         for idx, name in enumerate(classes):
+    #             prob = probs[idx].item() * 100
+    #             st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+    #     except Exception as e:
+    #         st.error(f"Could not load selected model: {e}")
+
+    # with tab4:
+    #     st.subheader("Hamet Model")
+    #     try:
+    #         # pass Google Drive File ID and filename
+    #         model, device = load_model(
+    #             file_id="", 
+    #             file_name="",
+    #             model_name=""
+    #         )
+            
+    #         pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+    #         if pred == "No Tumor":
+    #             st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+    #         else:
+    #             st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+    #         # present diagnostic results
+    #         st.markdown("---")
+    #         st.subheader("Diagnostic Results")
+                
+    #         st.write("##### Classification Confidence Breakdown:")
+    #         for idx, name in enumerate(classes):
+    #             prob = probs[idx].item() * 100
+    #             st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+    #     except Exception as e:
+    #         st.error(f"Could not load selected model: {e}")
+
+    # with tab5:
+    #     st.subheader("Izzie Model")
+    #     try:
+    #         # pass Google Drive File ID and filename
+    #         model, device = load_model(
+    #             file_id="", 
+    #             file_name="",
+    #             model_name=""
+    #         )
+            
+    #         pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+    #         if pred == "No Tumor":
+    #             st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+    #         else:
+    #             st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+    #         # present diagnostic results
+    #         st.markdown("---")
+    #         st.subheader("Diagnostic Results")
+                
+    #         st.write("##### Classification Confidence Breakdown:")
+    #         for idx, name in enumerate(classes):
+    #             prob = probs[idx].item() * 100
+    #             st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+    #     except Exception as e:
+    #         st.error(f"Could not load selected model: {e}")
+
+    # with tab6:
+    #     st.subheader("Mike Model")
+    #     try:
+    #         # pass Google Drive File ID and filename
+    #         model, device = load_model(
+    #             file_id="", 
+    #             file_name="",
+    #             model_name=""
+    #         )
+            
+    #         pred, conf, probs = run_inference(model, device, processed_image, classes)
+            
+    #         if pred == "No Tumor":
+    #             st.success(f"**Prediction: {pred}** (Confidence: {conf:.2f}%)")
+    #         else:
+    #             st.warning(f"**Tumor Detected: {pred}** (Confidence: {conf:.2f}%)")
+
+    #         # present diagnostic results
+    #         st.markdown("---")
+    #         st.subheader("Diagnostic Results")
+                
+    #         st.write("##### Classification Confidence Breakdown:")
+    #         for idx, name in enumerate(classes):
+    #             prob = probs[idx].item() * 100
+    #             st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
+                
+    #     except Exception as e:
+    #         st.error(f"Could not load selected model: {e}")
