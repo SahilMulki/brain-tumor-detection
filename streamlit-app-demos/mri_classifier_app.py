@@ -57,31 +57,31 @@ MODEL_CONFIG = {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "description": "Best used for high sensitivity in detecting subtle early-stage tissue variations.",
+        "description": "...",
     },
     "Yi Model": {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "description": "Best used for optimized low-parameter inference and rapid diagnostic output.",
+        "description": "...",
     },
     "Hamet Model": {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "description": "Best used for robust noise reduction on low-contrast anatomical scans.",
+        "description": "...",
     },
     "Izzie Model": {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "description": "Best used for fine-grained classification of boundary-adjacent pituitary lesions.",
+        "description": "...",
     },
     "Mike Model": {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "description": "Best used for deep feature representation using advanced convolutional block structures.",
+        "description": "...",
     }
 }
 
