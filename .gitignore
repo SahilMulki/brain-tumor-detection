@@ -1,5 +1,7 @@
 brain_mri_dataset/
 brain_dataset2/
+__pycache__/
+*.py[cod]
 venv/
 .venv/
 .venv-1/

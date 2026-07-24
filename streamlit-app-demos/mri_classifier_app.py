@@ -212,8 +212,9 @@ def yi_preprocess(image):
     return transform(image).unsqueeze(0)
 
 # Hamet Pipeline (TensorFlow: RGB, 3 Channels, Scaled 0.0 - 1.0)
+# mirrors training: image_dataset_from_directory loads RGB at 256x256 (bilinear), then x/255
 def hamet_preprocess(image):
-    img = image.resize((256, 256))
+    img = image.convert("RGB").resize((256, 256), Image.BILINEAR)
     img_array = np.array(img, dtype=np.float32) / 255.0
     return np.expand_dims(img_array, axis=0)  # Shape: (1, 256, 256, 3)
 
@@ -257,11 +258,12 @@ MODEL_CONFIG = {
         "description": "PyTorch CNN Model with 3-channel average pooling, reaching ~91% accuracy.",
     },
     "Hamet Model": {
-        "file_id": "",
-        "file_name": "",
-        "model_name": None,  
-        "preprocess": hamet_preprocess,
-        "description": "TensorFlow 4-layer CNN model trained with early stopping, reaching ~90% accuracy.",
+        "file_id": "1t33a801MgyRScx0NKvSwoTqcvJ-bRg9r",
+        "file_name": "CNNTest_v2.0.keras",
+        "model_name": None,  # Keras loads the full model, no architecture class needed
+        "preprocess_fn": hamet_preprocess,
+        "description": "TensorFlow/Keras 4-block CNN (16-32-64-128 filters) with progressive dropout, "
+                       "trained on 256x256 RGB scans with Adam and early stopping, reaching ~90% accuracy.",
     },
     "Izzie Model": {
         "file_id": "",
