@@ -4,4 +4,5 @@ torchvision
 Pillow
 gdown
 opencv-python-headless
-tensorflow
+numpy
+tensorflow-cpu
