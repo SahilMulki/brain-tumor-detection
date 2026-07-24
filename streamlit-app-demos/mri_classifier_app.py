@@ -6,6 +6,7 @@ import streamlit as st
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import tensorflow as tf
 from torchvision import transforms
 from PIL import Image
 
@@ -85,6 +86,88 @@ class Sahil_CNN(nn.Module):
     def forward(self, x):
         return self.fc(self.conv(x))
 
+# Yi CNN architecture
+class Yi_CNN(nn.Module):
+    def __init__(self, num_classes=4):
+        super().__init__()
+        self.layer1 = nn.Sequential(
+            nn.Conv2d(3, 16, 3, padding=1),  
+            nn.BatchNorm2d(16),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)  # 256 -> 128
+        )
+
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(16, 32, 3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)  # 128 -> 64
+        )
+
+        self.layer3 = nn.Sequential(
+            nn.Conv2d(32, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(4, 4)  # 64 -> 16
+        )
+
+        self.avgpool = nn.AdaptiveAvgPool2d((8, 8))
+
+        self.classifier = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(64 * 8 * 8, 256),
+            nn.ReLU(),
+            nn.Dropout(0.4),
+            nn.Linear(256, num_classes),
+        )
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.layer2(x)
+        x = self.layer3(x)
+        x = self.avgpool(x)
+        x = self.classifier(x)
+        return x
+
+# Izzie CNN architecture
+class Izzie_CNN(nn.Module):
+    def __init__(self, num_classes=4):
+        super(ImprovedCNN, self).__init__()
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.spatial_dropout = nn.Dropout2d(0.1)
+
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(num_features=16)
+
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(num_features=32)
+
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.bn3 = nn.BatchNorm2d(num_features=64)
+
+        self.conv4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.bn4 = nn.BatchNorm2d(num_features=128)
+
+        self.global_pool = nn.AdaptiveAvgPool2d(1)
+
+        self.dropout = nn.Dropout(0.5)
+        self.full_conn1 = nn.Linear(in_features=128, out_features=128)
+        self.full_conn2 = nn.Linear(in_features=128, out_features=num_classes)
+
+    def forward(self, x):
+        x = self.spatial_dropout(self.pool(F.relu(self.bn1(self.conv1(x)))))
+        x = self.spatial_dropout(self.pool(F.relu(self.bn2(self.conv2(x)))))
+        x = self.spatial_dropout(self.pool(F.relu(self.bn3(self.conv3(x)))))
+        x = self.spatial_dropout(self.pool(F.relu(self.bn4(self.conv4(x)))))
+
+        x = self.global_pool(x)
+        x = torch.flatten(x, start_dim=1)
+
+        x = F.relu(self.full_conn1(x))
+        x = self.dropout(x)
+        x = self.full_conn2(x)
+        return x
+        
 # GROUP'S PREPROCESSING PIPELINES
 # ================================
 
@@ -119,6 +202,30 @@ def sahil_preprocess(image):
     ])
     return transform(image).unsqueeze(0)
 
+# Yi preprocessing pipeline
+def yi_preprocess(image):
+    transform = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    return transform(image).unsqueeze(0)
+
+# Hamet Pipeline (TensorFlow: RGB, 3 Channels, Scaled 0.0 - 1.0)
+def hamet_preprocess(image):
+    img = image.resize((256, 256))
+    img_array = np.array(img, dtype=np.float32) / 255.0
+    return np.expand_dims(img_array, axis=0)  # Shape: (1, 256, 256, 3)
+
+def izzie_preprocess(image):
+    transform = transforms.Compose([
+        transforms.Resize((256, 256)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+    ])
+    # Convert image to RGB (in case of RGBA/Grayscale) and add batch dimension (Shape: 1 x 3 x 256 x 256)
+    return transform(image).unsqueeze(0)
+
 # default visual transform for UI rendering
 visual_transform = transforms.Compose([
     transforms.Resize((256, 256)),
@@ -133,54 +240,59 @@ MODEL_CONFIG = {
         "file_name": "brain_mri_cnn.pth",
         "model_name": Angel_CNN,
         "preprocess_fn": angel_preprocess,
-        "description": "Best used for general baseline feature extraction and balanced accuracy across all 4 tumor categories.",
+        "description": "PyTorch 5-layer CNN model with highest recall across tumor categories, reaching ~93% accuracy.",
     },
     "Sahil Model": {
         "file_id": "1VzAvU5BIMeZHHxI1b2boRVCG7Nok6xkt",
         "file_name": "best_cnn.pt",
         "model_name": Sahil_CNN,
         "preprocess_fn": sahil_preprocess,
-        "description": "Optimized with OpenCV margin cropping for high recall across tumor types.",
+        "description": "PyTorch CNN Model with margin cropping for high recall across tumor types, reaching ~85% accuracy.",
     },
     "Yi Model": {
         "file_id": "",
-        "file_name": "",
-        "model_name": None,
-        "preprocess_fn": angel_preprocess,
-        "description": "Awaiting deployment configurations...",
+        "file_name": "yi_cnn_ver2_result.pth",
+        "model_name": Yi_CNN,
+        "preprocess_fn": yi_preprocess,
+        "description": "PyTorch CNN Model with 3-channel average pooling, reaching ~91% accuracy.",
     },
     "Hamet Model": {
         "file_id": "",
         "file_name": "",
-        "model_name": None,
-        "preprocess_fn": angel_preprocess,
-        "description": "Awaiting deployment configurations...",
+        "model_name": None,  
+        "preprocess": hamet_preprocess,
+        "description": "TensorFlow 4-layer CNN model trained with early stopping, reaching ~90% accuracy.",
     },
     "Izzie Model": {
         "file_id": "",
-        "file_name": "",
-        "model_name": None,
-        "preprocess_fn": angel_preprocess,
-        "description": "Awaiting deployment configurations...",
+        "file_name": "",  
+        "model_name": Izzie_CNN, 
+        "preprocess": izzie_preprocess,
+        "description": "PyTorch CNN model with Spatial Dropout & Adaptive Pooling, reaching ~70% accuracy.",
     },
     "Mike Model": {
         "file_id": "",
         "file_name": "",
         "model_name": None,
-        "preprocess_fn": angel_preprocess,
+        "preprocess_fn": None,
         "description": "Awaiting deployment configurations...",
     }
 }
 
 # download trained model weights from Google Drive; loads model weights
 @st.cache_resource
-def load_model(file_id: str, file_name: str, model_name: nn.Module):
-    device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
-
+def load_model(file_id, file_name, model_name):
     if not os.path.exists(file_name):
         url = f"https://drive.google.com/uc?id={file_id}"
         gdown.download(url, file_name, quiet=False)
     
+    # TensorFlow model Loading
+    if file_name.endswith(('.keras', '.h5')):
+        model = tf.keras.models.load_model(file_name)
+        return model, "tensorflow"
+
+    # PyTorch model Loading
+    device = torch.device("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
     model = model_name()
     model.load_state_dict(torch.load(file_name, map_location=device))
     model = model.to(device)
@@ -189,9 +301,19 @@ def load_model(file_id: str, file_name: str, model_name: nn.Module):
 
 # run forward pass thru model for inference
 def run_inference(model, device, original_image, preprocess_fn, classes):
-    # Dynamically apply the selected model's custom pre-processing
-    input_tensor = preprocess_fn(original_image).to(device)
+    # apply the selected model's custom pre-processing
+    input_data = preprocess_fn(original_image)
 
+    # TensorFlow inference
+    if device == "tensorflow":
+        probabilities = model.predict(input_data, verbose=0)[0]
+        predicted_idx = int(np.argmax(probabilities))
+        confidence_pct = float(probabilities[predicted_idx]) * 100
+        predicted_class = classes[predicted_idx]
+        return predicted_class, confidence_pct, probabilities
+
+    # PyTorch inference
+    input_tensor = input_data.to(device)
     with torch.no_grad():
         outputs = model(input_tensor)
         probabilities = F.softmax(outputs, dim=1)[0]
@@ -200,7 +322,7 @@ def run_inference(model, device, original_image, preprocess_fn, classes):
         predicted_class = classes[predicted_idx.item()]
         confidence_pct = confidence.item() * 100
         
-    return predicted_class, confidence_pct, probabilities
+    return predicted_class, confidence_pct, probabilities.cpu().numpy()
 
 
 # setup Streamlit UI
@@ -253,7 +375,7 @@ if uploaded_file is not None:
     st.image(display_image, width=300)
 
     # Validate if model class & file ID are configured
-    if selected_config["model_name"] is not None and selected_config["file_id"] != "":
+    if selected_config["file_id"] != "":
         try:
             if not os.path.exists(selected_config["file_name"]):
                 st.toast(f"Downloading {selected_config['file_name']} from Google Drive...")
@@ -284,10 +406,10 @@ if uploaded_file is not None:
             st.markdown("--")
             st.subheader("Classification Confidence Breakdown:")
             for idx, name in enumerate(classes):
-                prob = probs[idx].item() * 100
+                prob = float(probs[idx]) * 100
                 st.progress(prob / 100, text=f"{name}: {prob:.2f}%")
                 
         except Exception as e:
             st.error(f"Could not load selected model: {e}")
     else:
-        st.info(f"**{selected_model_name}** will be activated once Google Drive File ID and architecture are configured.")
+        st.info(f"**{selected_model_name}** will be activated once Google Drive File ID is configured.")
