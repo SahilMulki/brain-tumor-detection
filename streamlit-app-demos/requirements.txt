@@ -1,8 +1,8 @@
 streamlit
-torch
-torchvision
-Pillow
-gdown
-opencv-python-headless
-numpy
 tensorflow-cpu
+torch --extra-index-url https://download.pytorch.org/whl/cpu
+torchvision --extra-index-url https://download.pytorch.org/whl/cpu
+opencv-python-headless
+gdown
+pillow
+numpy
