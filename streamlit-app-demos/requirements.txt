@@ -1,7 +1,7 @@
 streamlit
 tensorflow-cpu
-torch --index pytorch-cpu
-torchvision --index pytorch-cpu
+torch
+torchvision
 opencv-python-headless
 gdown
 pillow

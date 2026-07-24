@@ -5,3 +5,8 @@ explicit = true
 
 [default-index]
 url = "https://pypi.org/simple"
+
+# Tells uv to automatically route torch and torchvision to the cpu index
+[sources]
+torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }
