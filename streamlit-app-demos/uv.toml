@@ -1,0 +1,7 @@
+[[index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[default-index]
+url = "https://pypi.org/simple"
