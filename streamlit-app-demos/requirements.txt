@@ -4,3 +4,4 @@ torchvision
 Pillow
 gdown
 opencv-python-headless
+tensorflow
