@@ -1,6 +1,6 @@
 # Brain Tumor Detection Web Application
 
-🌐 **Live Application:** [brain-tumor-detection-ai4all.streamlit.app](https://brain-tumor-detection-ai4all.streamlit.app/)
+🌐 **Live Application:** [brain-mri-tumor-classifier-ai4all.streamlit.app](https://brain-mri-tumor-classifier-ai4all.streamlit.app/)
 
 ### Overview
 
