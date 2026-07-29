@@ -17,5 +17,5 @@ The tool provides confidence score breakdowns for each classification category t
 
 * **Multi-Model Inference:** Allows users to switch between different custom CNN model architectures trained by individual team members.
 * **Framework Flexibility:** Integrates both **PyTorch** and **TensorFlow/Keras** deep learning pipelines.
-* **Preprocessing Visualization:** Displays original vs. preprocessed grayscale/channel transformations before running inference.
+* **Preprocessing Transparency:** Lists the selected model's preprocessing pipeline steps beside the uploaded scan.
 * **Diagnostic Breakdown:** Renders probability distribution bars for all four diagnosis classes.
