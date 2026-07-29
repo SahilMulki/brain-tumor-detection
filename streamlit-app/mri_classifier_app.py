@@ -251,11 +251,11 @@ MODEL_CONFIG = {
         "description": "PyTorch CNN Model with margin cropping for high recall across tumor types, reaching ~85% accuracy.",
     },
     "Yi Model": {
-        "file_id": "",
-        "file_name": "yi_cnn_ver2_result.pth",
+        "file_id": "1erH01ontmINe8Il-Ap3_In_gVEoBsphD",
+        "file_name": "yi_cnn_ver3_result.pth",
         "model_name": Yi_CNN,
         "preprocess_fn": yi_preprocess,
-        "description": "PyTorch CNN Model with 3-channel average pooling, reaching ~91% accuracy.",
+        "description": "PyTorch CNN Model with 3-channel average pooling, reaching ~90% accuracy.",
     },
     "Hamet Model": {
         "file_id": "1t33a801MgyRScx0NKvSwoTqcvJ-bRg9r",
