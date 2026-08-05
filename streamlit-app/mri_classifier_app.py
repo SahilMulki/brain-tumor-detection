@@ -137,40 +137,45 @@ class Yi_CNN(nn.Module):
 class Izzie_CNN(nn.Module):
     def __init__(self, num_classes=4):
         super(Izzie_CNN, self).__init__()
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.spatial_dropout = nn.Dropout2d(0.1)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)  # cut image size by half
 
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=16, kernel_size=3, padding=1)  # input size: 256x256
         self.bn1 = nn.BatchNorm2d(num_features=16)
 
-        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, padding=1)  # input size: 128x128
         self.bn2 = nn.BatchNorm2d(num_features=32)
 
-        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1)  # input size: 64x64
         self.bn3 = nn.BatchNorm2d(num_features=64)
 
-        self.conv4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)
+        self.conv4 = nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1)  # input size: 32x32
         self.bn4 = nn.BatchNorm2d(num_features=128)
 
-        self.global_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv5 = nn.Conv2d(in_channels=128, out_channels=256, kernel_size=3, padding=1)  # input size: 16x16
+        self.bn5 = nn.BatchNorm2d(num_features=256)
+        self.spatial_dropout5 = nn.Dropout2d(0.1)   # light regularization, only on the deepest/widest block
+
+        self.global_pool = nn.AdaptiveAvgPool2d(1)  # 256 x 8 x 8 -> 256 x 1 x 1
 
         self.dropout = nn.Dropout(0.5)
-        self.full_conn1 = nn.Linear(in_features=128, out_features=128)
-        self.full_conn2 = nn.Linear(in_features=128, out_features=num_classes)
+        self.full_conn1 = nn.Linear(in_features=256, out_features=256)
+        self.full_conn2 = nn.Linear(in_features=256, out_features=num_classes)
 
     def forward(self, x):
-        x = self.spatial_dropout(self.pool(F.relu(self.bn1(self.conv1(x)))))
-        x = self.spatial_dropout(self.pool(F.relu(self.bn2(self.conv2(x)))))
-        x = self.spatial_dropout(self.pool(F.relu(self.bn3(self.conv3(x)))))
-        x = self.spatial_dropout(self.pool(F.relu(self.bn4(self.conv4(x)))))
+        x = self.pool(F.relu(self.bn1(self.conv1(x))))  # output size: 128x128
+        x = self.pool(F.relu(self.bn2(self.conv2(x))))  # output size: 64x64
+        x = self.pool(F.relu(self.bn3(self.conv3(x))))  # output size: 32x32
+        x = self.pool(F.relu(self.bn4(self.conv4(x))))  # output size: 16x16
+        x = self.spatial_dropout5(self.pool(F.relu(self.bn5(self.conv5(x)))))  # output size: 8x8
 
         x = self.global_pool(x)
-        x = torch.flatten(x, start_dim=1)
+        x = torch.flatten(x, start_dim=1)  # (batch, 256)
 
         x = F.relu(self.full_conn1(x))
         x = self.dropout(x)
         x = self.full_conn2(x)
         return x
+
 
 # GROUP'S PREPROCESSING PIPELINES
 # ================================
@@ -285,12 +290,12 @@ MODEL_CONFIG = {
         "preprocess_steps": ["RGB ×3", "Resize 256×256 bilinear", "Scale 0–1"],
     },
     "Izzie Model": {
-        "file_id": "",
-        "file_name": "",
+        "file_id": "1iDdZ5XLqM5o5xBOJ1Y2FOe7_leHKL_qg",
+        "file_name": "izzie_cnn_weights.pth",
         "model_name": Izzie_CNN,
         "preprocess_fn": izzie_preprocess,
         "framework": "PyTorch",
-        "accuracy": "~70%",
+        "accuracy": "~90%",
         "description": "Convolutional network with spatial dropout and adaptive pooling.",
         "preprocess_steps": ["RGB ×3", "Resize 256×256", "Normalize μ 0.5 σ 0.5"],
     },
