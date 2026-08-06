@@ -2,6 +2,8 @@
 
 This project focuses on automatically identifying and classifying brain tumors from magnetic resonance imaging (MRI) scans.
 
+🌐 **Live Application:** [brain-mri-tumor-classifier-ai4all.streamlit.app](https://brain-mri-tumor-classifier-ai4all.streamlit.app/)
+
 ## Collabortors
 * [Angel Velasquez](https://github.com/avelasquez7711-bit)
 * [Sahil Mulki](https://github.com/SahilMulki)
